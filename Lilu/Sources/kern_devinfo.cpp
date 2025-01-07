@@ -56,7 +56,8 @@ void DeviceInfo::updateFramebufferId() {
 				else if (gen == CPUInfo::CpuGeneration::Haswell)
 					reportedFramebufferId = ConnectorLessHaswellPlatformId1;
 				else if (gen == CPUInfo::CpuGeneration::Skylake)
-					reportedFramebufferId = ConnectorLessSkylakePlatformId3;
+					// fake SKL as KBL on macOS 13+
+					reportedFramebufferId = getKernelVersion() >= KernelVersion::Ventura ? ConnectorLessKabyLakePlatformId2 : ConnectorLessSkylakePlatformId3;
 				else if (gen == CPUInfo::CpuGeneration::KabyLake)
 					reportedFramebufferId = ConnectorLessKabyLakePlatformId2;
 				else if (gen == CPUInfo::CpuGeneration::CoffeeLake)
@@ -78,7 +79,8 @@ void DeviceInfo::updateFramebufferId() {
 					else if (gen == CPUInfo::CpuGeneration::Broadwell)
 						reportedFramebufferId = 0x16260006;
 					else if (gen == CPUInfo::CpuGeneration::Skylake)
-						reportedFramebufferId = 0x19160000;
+						// fake SKL as KBL on macOS 13+
+						reportedFramebufferId = getKernelVersion() >= KernelVersion::Ventura ? 0x591B0000 : 0x19160000;
 					else if (gen == CPUInfo::CpuGeneration::KabyLake)
 						reportedFramebufferId = 0x591B0000;
 					else if (gen == CPUInfo::CpuGeneration::CoffeeLake || gen == CPUInfo::CpuGeneration::CometLake)
@@ -99,7 +101,8 @@ void DeviceInfo::updateFramebufferId() {
 					else if (gen == CPUInfo::CpuGeneration::Broadwell)
 						reportedFramebufferId = 0x16220007;  /* for now */
 					else if (gen == CPUInfo::CpuGeneration::Skylake)
-						reportedFramebufferId = DefaultAppleSkylakePlatformId;
+						// fake SKL as KBL on macOS 13+
+						reportedFramebufferId = getKernelVersion() >= KernelVersion::Ventura ? DefaultAppleKabyLakePlatformId : DefaultAppleSkylakePlatformId;
 					else if (gen == CPUInfo::CpuGeneration::KabyLake)
 						reportedFramebufferId = DefaultAppleKabyLakePlatformId;
 					else if (gen == CPUInfo::CpuGeneration::CoffeeLake || gen == CPUInfo::CpuGeneration::CometLake)
@@ -181,6 +184,28 @@ void DeviceInfo::awaitPublishing(IORegistryEntry *obj) {
 		SYSLOG("dev", "found unconfigured pci bridge %s", safeString(obj->getName()));
 }
 
+bool DeviceInfo::checkForAndSetAMDiGPU(IORegistryEntry *obj) {
+	uint32_t dev = 0;
+	WIOKit::getOSDataValue(obj, "device-id", dev);
+	dev &= 0xFF00;
+	switch (dev) {
+		case GenericAMDKvGr:
+		case GenericAMDVanGogh2:
+		case GenericAMDRvPcBcPhn:
+		case GenericAMDRnCznLcVghRmbRph:
+		case GenericAMDPhoenix2:
+		case GenericAMDSumo:
+		case GenericAMDKbMlCzStnWr:
+		case GenericAMDTrinity:
+			DBGLOG("dev", "found IGPU device %s", safeString(obj->getName()));
+			videoBuiltin = obj;
+			requestedExternalSwitchOff |= videoBuiltin->getProperty(RequestedExternalSwitchOffName) != nullptr;
+			return true;
+		default:
+			return false;
+	}
+}
+
 void DeviceInfo::grabDevicesFromPciRoot(IORegistryEntry *pciRoot) {
 	awaitPublishing(pciRoot);
 
@@ -206,6 +231,8 @@ void DeviceInfo::grabDevicesFromPciRoot(IORegistryEntry *pciRoot) {
 				DBGLOG("dev", "found IGPU device %s", safeString(name));
 				videoBuiltin = obj;
 				requestedExternalSwitchOff |= videoBuiltin->getProperty(RequestedExternalSwitchOffName) != nullptr;
+			} else if (vendor == WIOKit::VendorID::ATIAMD && (code == WIOKit::ClassCode::DisplayController || code == WIOKit::ClassCode::VGAController)) {
+				checkForAndSetAMDiGPU(obj);
 			} else if (code == WIOKit::ClassCode::HDADevice || code == WIOKit::ClassCode::HDAMmDevice) {
 				if (vendor == WIOKit::VendorID::Intel && name && (!strcmp(name, "HDAU") || !strcmp(name, "B0D3"))) {
 					DBGLOG("dev", "found HDAU device %s", safeString(name));
@@ -242,6 +269,14 @@ void DeviceInfo::grabDevicesFromPciRoot(IORegistryEntry *pciRoot) {
 								pcicode == WIOKit::ClassCode::VGAController ||
 								pcicode == WIOKit::ClassCode::Ex3DController ||
 								pcicode == WIOKit::ClassCode::XGAController) {
+								if (pcivendor == WIOKit::VendorID::ATIAMD) {
+									// The iGPU can live in places other than the root bridge.
+									// This can be seen in Ryzen Mobile and newer.
+									// This is why the older iGPUs had issues, as the device lives under the root bridge on those platforms.
+									if (checkForAndSetAMDiGPU(pciobj)) {
+										continue;
+									}
+								}
 								DBGLOG("dev", "found GFX0 device %s at %s by %04X",
 									   safeString(pciobj->getName()), safeString(name),  pcivendor);
 								v.video = pciobj;

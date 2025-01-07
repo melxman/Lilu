@@ -12,13 +12,15 @@ Please note that improperly written immature plugins will not be listed there.
 [ATH9KFixup](https://github.com/chunnann/ATH9KFixup) | Various patches for unsupported Atheros Wi-Fi cards
 [BrightnessKeys](https://github.com/acidanthera/BrightnessKeys) | Automatic handling of brightness keys based on ACPI Specification
 [BlueToolFixup](https://github.com/acidanthera/BrcmPatchRAM) | Forces BlueTool to skip attempting a firmware update, allowing for some Broadcom chipsets to work on Monterey. It also properly sets the transport
-[CPUFriend](https://github.com/PMheart/CPUFriend) | Dynamic power management data injection
-[CpuTscSync](https://github.com/lvs1974/CpuTscSync) | Сombining functionality of VoodooTSCSync and disabling xcpm_urgency if TSC is not in sync
+[CPUFriend](https://github.com/acidanthera/CPUFriend) | Dynamic power management data injection
+[CpuTscSync](https://github.com/acidanthera/CpuTscSync) | Сombining functionality of VoodooTSCSync and disabling xcpm_urgency if TSC is not in sync
+[CryptexFixup](https://github.com/acidanthera/CryptexFixup) | Kernel extension for installing Rosetta Cryptex in macOS Ventura
 [DebugEnhancer](https://github.com/acidanthera/DebugEnhancer) | Enable debug output in the macOS kernel
 [DiskArbitrationFixup](https://github.com/Goldfish64/DiskArbitrationFixup) | Disable the uninitialised disk message at disk insertion
 [ECEnabler](https://github.com/1Revenger1/ECEnabler) | Allows reading Embedded Controller fields over 1 byte long, vastly reducing the amount of ACPI modification needed (if any) for working battery status
 [HibernationFixup](https://github.com/acidanthera/HibernationFixup) | Enable 3 & 25 mode hibernation on certain hardware
 [Innie](https://github.com/cdf/Innie) | Making PCIe drives appear as internal
+[IntelBTPatcher](https://github.com/OpenIntelWireless/IntelBluetoothFirmware) | Fix Intel Bluetooth on Big Sur, Catalina, Mojave, High Sierra etc, tested with Big Sur and Catalina all working good.
 [Kryptonite](https://github.com/mayankk2308/kryptonite) | Various patches for Thunderbolt-based eGPUs
 [MacHyperVSupport](https://github.com/acidanthera/MacHyperVSupport) | Hyper-V integration services for macOS
 [NoTouchID](https://github.com/al3xtjames/NoTouchID) | Disables Touch ID checks causing hangs

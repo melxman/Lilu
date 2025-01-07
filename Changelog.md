@@ -1,5 +1,43 @@
 Lilu Changelog
 ==============
+#### v1.7.0
+- Added Arrow Lake CPU definitions
+- Improved AMD IGPU detection via device-id, thanks @Zormeister
+
+#### v1.6.9
+- Fixed loading on macOS 10.10 and older due to a MacKernelSDK regression
+- Added AMD IGPU detection via device-id, thanks @Zormeister
+
+#### v1.6.8
+- Allow loading on macOS 15 without `-lilubetaall`
+
+#### v1.6.7
+- Added Broadwell-EP CPU model
+- Added Raptor Lake C0 stepping model
+
+#### v1.6.6
+- Fixed macOS 13+ installer detection regression in 1.6.5
+- Allow loading on macOS 14 without `-lilubetaall`
+
+#### v1.6.5
+- Fixed macOS 13+ recovery and installer detection
+
+#### v1.6.4
+- Added AMD IGPU detection
+
+#### v1.6.3
+- Added Raptor Lake CPU definitions
+
+#### v1.6.2
+- Fixed KC segment name, which also fixed kernel panic on macOS 13 b3
+- Disable EFI64 runtime APIs when `-legacy` is used on 32-bit kernels
+
+#### v1.6.1
+- Allow loading on macOS 13 without `-lilubetaall`
+- Added Ventura dyld shared cache pathing
+- Changed SKL default ig-platform-id to KBL on macOS 13+
+- Added patch with masking support
+
 #### v1.6.0
 - Dropped internal shared patcher instance grabbing API
 

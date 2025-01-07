@@ -651,7 +651,7 @@ void UserPatcher::patchSharedCache(vm_map_t taskPort, uint32_t slide, cpu_type_t
 			}
 
 			if (modStart && modEnd && offNum && patch.cpu == cpu) {
-				DBGLOG("user", "patch for %s in %lX %lX", mod->path, modStart, modEnd);
+				DBGLOG("user", "patch for %s in %llX %llX", mod->path, (uint64_t)modStart, (uint64_t)modEnd);
 				auto tmp = Buffer::create<uint8_t>(patch.size);
 				if (tmp) {
 					for (size_t k = 0; k < offNum; k++) {
@@ -758,7 +758,10 @@ bool UserPatcher::loadDyldSharedCacheMapping() {
 	uint8_t *buffer {nullptr};
 	size_t bufferSize {0};
 	bool isHaswell = BaseDeviceInfo::get().cpuHasAvx2;
-	if (getKernelVersion() >= KernelVersion::BigSur) {
+	if (getKernelVersion() >= KernelVersion::Ventura) {
+		buffer = FileIO::readFileToBuffer(isHaswell ? venturaSharedCacheMapHaswell : venturaSharedCacheMapLegacy, bufferSize);
+	}
+	else if (getKernelVersion() >= KernelVersion::BigSur) {
 		buffer = FileIO::readFileToBuffer(isHaswell ? bigSurSharedCacheMapHaswell : bigSurSharedCacheMapLegacy, bufferSize);
 	}
 	else if (isHaswell && getKernelVersion() >= KernelVersion::Yosemite) {
@@ -857,7 +860,7 @@ bool UserPatcher::loadFilesForPatching() {
 				MachInfo::findSectionBounds(buf, fileSize, vmsegment, vmsection, sectionptr, size,
 											fileSegments[patch.segment], fileSections[patch.segment], patch.cpu);
 
-				DBGLOG("user", "findSectionBounds returned vmsegment %lX vmsection %lX sectionptr %p size %lu", vmsegment, vmsection, sectionptr, size);
+				DBGLOG("user", "findSectionBounds returned vmsegment %llX vmsection %llX sectionptr %p size %lu", (uint64_t)vmsegment, (uint64_t)vmsection, sectionptr, size);
 
 				if (size) {
 					uint8_t *start = reinterpret_cast<uint8_t *>(sectionptr);
@@ -878,7 +881,7 @@ bool UserPatcher::loadFilesForPatching() {
 								off_t valueOff = reinterpret_cast<uintptr_t>(start - pageOff - reinterpret_cast<uintptr_t>(sectionptr));
 								off_t segOff = vmsection-vmsegment+sectOff;
 
-								DBGLOG("user", "using it off %llX pageOff %llX new %lX segOff %llX", sectOff, pageOff, vmpage, segOff);
+								DBGLOG("user", "using it off %llX pageOff %llX new %llX segOff %llX", sectOff, (uint64_t)pageOff, (uint64_t)vmpage, segOff);
 
 								// We need binary entry, i.e. the page our patch belong to
 								LookupStorage *entry = nullptr;
@@ -1152,15 +1155,18 @@ void UserPatcher::activate() {
 
 const char *UserPatcher::getSharedCachePath() {
 	bool isHaswell = BaseDeviceInfo::get().cpuHasAvx2;
-	if (getKernelVersion() >= KernelVersion::BigSur)
+	if (getKernelVersion() >= KernelVersion::Ventura)
+		return isHaswell ? venturaSharedCacheHaswell : venturaSharedCacheLegacy;
+	else if (getKernelVersion() >= KernelVersion::BigSur)
 		return isHaswell ? bigSurSharedCacheHaswell : bigSurSharedCacheLegacy;
 	return isHaswell ? sharedCacheHaswell : sharedCacheLegacy;
 }
 
 bool UserPatcher::matchSharedCachePath(const char *path) {
 	if (getKernelVersion() >= KernelVersion::BigSur) {
-		auto len = strlen(bigSurSharedCacheLegacy);
-		if (strncmp(path, bigSurSharedCacheLegacy, len) != 0)
+		auto dyld_path = getKernelVersion() >= KernelVersion::Ventura ? venturaSharedCacheLegacy : bigSurSharedCacheLegacy;
+		auto len = strlen(dyld_path);
+		if (strncmp(path, dyld_path, len) != 0)
 			return false;
 		path += len;
 	} else {
@@ -1175,8 +1181,15 @@ bool UserPatcher::matchSharedCachePath(const char *path) {
 		path++;
 
 	// Skip suffix matching on macOS 12 and newer
-	if (getKernelVersion() >= KernelVersion::Monterey && path[0] == '.' && path[1] >= '1' && path[1] <= '9')
-		path += 2;
+	if (getKernelVersion() >= KernelVersion::Monterey) {
+		if (path[0] == '.')
+			path += 1;
+		if (getKernelVersion() >= KernelVersion::Ventura && path[0] == '0')
+			path += 1;
+		if (path[0] >= '1' && path[0] <= '9')
+			path += 1;
+	}
+		
 
 	return path[0] == '\0';
 }
